@@ -600,7 +600,7 @@ const ELevelCard = ({
         contextId={selectedItem?.id}
         contextType="E_Level"
         contextName={selectedItem?.name}
-        levelTeachers={selectedItem?.teachers || []}
+        levelTeachers={selectedItem?.teachers}
         onRefresh={onRefresh}
       />
       

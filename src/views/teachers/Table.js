@@ -152,13 +152,6 @@ const Table = () => {
             mediaFormData.append('images[]', image[0])
             mediaFormData.append('context_type', 'User')
             mediaFormData.append('context_id', selected.id)
-
-
-
-
-
-
-
             await uploadMedia({ 
               body: mediaFormData
             }).unwrap()

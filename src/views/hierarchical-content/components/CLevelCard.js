@@ -638,7 +638,7 @@ const CLevelCard = ({ data, selectedPath, onNodeClick, onRefresh }) => {
         contextId={selectedItem?.id}
         contextType="C_Level"
         contextName={selectedItem?.name}
-        levelTeachers={selectedItem?.teachers || []}
+        levelTeachers={selectedItem?.teachers}
         eLevelContext={eLevelContext}
         onRefresh={onRefresh}
       />

@@ -26,11 +26,7 @@ import {
   EyeOff,
   Save,
   X,
-  DollarSign,
-  CreditCard,
-  Users,
-  Gift,
-  HelpCircle
+  Users
 } from 'react-feather'
 import FileUploaderRestrictions from '../../components/uplaoder/FileUploaderRestrictions'
 import TeacherAttachment from './TeacherAttachment'
@@ -43,6 +39,18 @@ import {
 } from '../../../redux/rtkQuery/hierarchical/unit'
 import { useUpdateMutation as useUpdateMediaMutation } from '../../../redux/rtkQuery/media'
 import ErrorAlert from '../../components/handleStatusCode/error'
+
+const MAX_VISIBLE_TEACHERS = 3
+
+const normalizeTeachers = (input) => {
+  if (!input) return []
+
+  if (Array.isArray(input)) {
+    return input.filter(Boolean)
+  }
+
+  return [input].filter(Boolean)
+}
 
 const UnitCard = ({ data, selectedPath, onNodeClick, onRefresh }) => {
   const { t } = useTranslation()
@@ -64,6 +72,17 @@ const UnitCard = ({ data, selectedPath, onNodeClick, onRefresh }) => {
   })
   const [files, setFiles] = useState([])
   const [videoFiles, setVideoFiles] = useState([])
+
+  const selectedItemTeachers = useMemo(() => {
+    if (!selectedItem) return []
+    if (Array.isArray(selectedItem.teachers) && selectedItem.teachers.length > 0) {
+      return normalizeTeachers(selectedItem.teachers)
+    }
+    if (selectedItem.teacher) {
+      return normalizeTeachers(selectedItem.teacher)
+    }
+    return []
+  }, [selectedItem])
 
   // API hooks
   const [createUnit, { isLoading: isCreating }] = useCreateMutation()
@@ -346,6 +365,35 @@ const UnitCard = ({ data, selectedPath, onNodeClick, onRefresh }) => {
                       <p className="content-description text-muted small">
                         {item.bio || t('No description available')}
                       </p>
+                      {normalizeTeachers(item.teachers ?? item.teacher).length > 0 && (
+                        <div className="mt-2">
+                          <small className="text-muted d-block">
+                            {t('Assigned Teachers')}
+                          </small>
+                          <div className="d-flex flex-wrap align-items-center mt-1">
+                            {normalizeTeachers(item.teachers ?? item.teacher)
+                              .slice(0, MAX_VISIBLE_TEACHERS)
+                              .map((teacher) => (
+                              <Badge
+                                key={teacher.id}
+                                color="light-primary"
+                                className="me-1 mb-1"
+                                onClick={(event) => event.stopPropagation()}
+                                style={{ cursor: 'default' }}
+                              >
+                                {teacher.name || t('Unknown Teacher')}
+                              </Badge>
+                            ))}
+                            {normalizeTeachers(item.teachers ?? item.teacher).length > MAX_VISIBLE_TEACHERS && (
+                              <small className="text-muted ms-1 mb-1">
+                                {t('and {{count}} more', {
+                                  count: normalizeTeachers(item.teachers ?? item.teacher).length - MAX_VISIBLE_TEACHERS
+                                })}
+                              </small>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                     <div className="d-flex align-items-center">
                       <Badge 
@@ -678,7 +726,7 @@ const UnitCard = ({ data, selectedPath, onNodeClick, onRefresh }) => {
         contextId={selectedItem?.id}
         contextType="Unit"
         contextName={selectedItem?.name}
-        levelTeachers={selectedItem?.teachers || []}
+        levelTeachers={selectedItemTeachers}
         eLevelContext={eLevelContext}
         onRefresh={onRefresh}
       />

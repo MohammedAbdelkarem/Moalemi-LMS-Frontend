@@ -855,7 +855,7 @@ const CourseCard = ({ data, selectedPath, onNodeClick, onRefresh }) => {
         contextId={selectedItem?.id}
         contextType="Course"
         contextName={selectedItem?.name}
-        levelTeachers={selectedItem?.teachers || []}
+        levelTeachers={selectedItem?.teachers}
         eLevelContext={eLevelContext}
         onRefresh={onRefresh}
       />

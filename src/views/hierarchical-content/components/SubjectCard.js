@@ -1235,7 +1235,7 @@ const SubjectCard = ({ data, selectedPath, onNodeClick, onRefresh }) => {
         contextId={selectedItem?.id}
         contextType="Subject"
         contextName={selectedItem?.name}
-        levelTeachers={selectedItem?.teachers || []}
+        levelTeachers={selectedItem?.teachers}
         eLevelContext={eLevelContext}
         onRefresh={onRefresh}
       />

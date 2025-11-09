@@ -86,18 +86,28 @@ const TeacherAttachment = ({
     }
   }, [eLevelContext, getTeachersByContext, getTeachers, t])
 
+  const normalizeTeachers = (input) => {
+    if (!input) return []
+
+    if (Array.isArray(input)) {
+      return input.filter(Boolean)
+    }
+
+    return [input].filter(Boolean)
+  }
+
   const loadAttachedTeachers = useCallback(async () => {
     try {
       setAttachedLoading(true)
       // Use the levelTeachers prop if available, otherwise fetch from API
       if (levelTeachers.length > 0) {
-        setAttachedTeachers(levelTeachers)
+        setAttachedTeachers(normalizeTeachers(levelTeachers))
       } else {
         const response = await getAttachedTeachers({ 
           id: contextId, 
           type: contextType 
         }).unwrap()
-        setAttachedTeachers(response.data || [])
+        setAttachedTeachers(normalizeTeachers(response.data))
       }
     } catch (error) {
       console.error('Error loading attached teachers:', error)
@@ -205,7 +215,7 @@ const TeacherAttachment = ({
 
   const getAvailableTeachers = () => {
     const attachedIds = attachedTeachers.map(t => t.id)
-    return allTeachers.filter(teacher => !attachedIds.includes(teacher.id))
+    return allTeachers.filter(teacher => teacher?.id && !attachedIds.includes(teacher.id))
   }
 
   return (
