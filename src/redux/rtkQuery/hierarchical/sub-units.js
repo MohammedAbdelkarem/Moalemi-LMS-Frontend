@@ -43,6 +43,13 @@ export const subUnitSlice = createApi({
         url: `/sub-units/${id}/change-access-type-status${price ? `?price=${price}` : ''}`,
         method: "PATCH"
       })
+    }),
+    changePriority: builder.mutation({
+      query: ({ body }) => ({
+        url: `/sub-units/change-priority`,
+        body,
+        method: "POST"
+      })
     })
   })
 })
@@ -52,4 +59,5 @@ export const { useGetMutation,
                useUpdateMutation,
                useDeleteMutation,
                useChangeStatusMutation,
-               useChangeTypeMutation } = subUnitSlice
+               useChangeTypeMutation,
+               useChangePriorityMutation } = subUnitSlice
