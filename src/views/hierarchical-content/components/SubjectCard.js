@@ -392,22 +392,32 @@ const SubjectCard = ({ data, selectedPath, onNodeClick, onRefresh }) => {
 
       // Update videos using media API if video files are selected
       if (videoFiles.length > 0) {
+        const hasExistingVideo = Boolean(selectedItem.video?.id)
         const videoFormData = new FormData()
-        videoFormData.append('_method', 'PUT')
+
+        if (hasExistingVideo) {
+          videoFormData.append('_method', 'PUT')
+        }
+
         videoFormData.append('context_id', selectedItem.id)
         videoFormData.append('context_type', 'Subject')
-        
+
         videoFiles.forEach((file) => {
           videoFormData.append('videos[]', file)
         })
-        
-        await updateMedia({ body: videoFormData, id: selectedItem.media.id }).unwrap()
+
+        if (hasExistingVideo) {
+          await updateMedia({ body: videoFormData, id: selectedItem.video.id }).unwrap()
+        } else {
+          await uploadMedia({ body: videoFormData }).unwrap()
+        }
       }
 
       setEditModal(false)
       setSelectedItem(null)
-      setFormData({ name: '', bio: '', image: null, access_type: 'free', price: '', currentMediaUrl: null, currentVideoUrl: null })
+      setFormData({ name: '', bio: '', image: null, icon: null, access_type: 'free', price: '', currentMediaUrl: null, currentIconUrl: null, currentVideoUrl: null })
       setFiles([])
+      setIconFiles([])
       setVideoFiles([])
       onRefresh?.()
 
@@ -959,7 +969,7 @@ const SubjectCard = ({ data, selectedPath, onNodeClick, onRefresh }) => {
         </ModalFooter>
       </Modal>
 
-      <Modal isOpen={editModal} toggle={() => setEditModal(false)}>
+      <Modal isOpen={editModal} toggle={() => setEditModal(false)} size="lg">
           <ModalHeader 
             toggle={() => setEditModal(false)}
             className="bg-primary text-white"

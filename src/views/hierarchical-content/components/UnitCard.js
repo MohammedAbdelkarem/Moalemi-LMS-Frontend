@@ -26,7 +26,10 @@ import {
   EyeOff,
   Save,
   X,
-  Users
+  Users,
+  ChevronUp,
+  ChevronDown,
+  List
 } from 'react-feather'
 import FileUploaderRestrictions from '../../components/uplaoder/FileUploaderRestrictions'
 import TeacherAttachment from './TeacherAttachment'
@@ -35,7 +38,8 @@ import {
   useCreateMutation,
   useUpdateMutation,
   useDeleteMutation,
-  useChangeStatusMutation
+  useChangeStatusMutation,
+  useChangePriorityMutation
 } from '../../../redux/rtkQuery/hierarchical/unit'
 import { useUpdateMutation as useUpdateMediaMutation } from '../../../redux/rtkQuery/media'
 import ErrorAlert from '../../components/handleStatusCode/error'
@@ -61,6 +65,7 @@ const UnitCard = ({ data, selectedPath, onNodeClick, onRefresh }) => {
   const [teacherModal, setTeacherModal] = useState(false)
   const [couponModal, setCouponModal] = useState(false)
   const [statusConfirmModal, setStatusConfirmModal] = useState(false)
+  const [priorityModal, setPriorityModal] = useState(false)
   const [selectedItem, setSelectedItem] = useState(null)
   const [formData, setFormData] = useState({
     name: '',
@@ -72,6 +77,7 @@ const UnitCard = ({ data, selectedPath, onNodeClick, onRefresh }) => {
   })
   const [files, setFiles] = useState([])
   const [videoFiles, setVideoFiles] = useState([])
+  const [priorityList, setPriorityList] = useState([])
 
   const selectedItemTeachers = useMemo(() => {
     if (!selectedItem) return []
@@ -90,6 +96,7 @@ const UnitCard = ({ data, selectedPath, onNodeClick, onRefresh }) => {
   const [deleteUnit, { isLoading: isDeleting }] = useDeleteMutation()
   const [changeStatus, { isLoading: isChangingStatus }] = useChangeStatusMutation()
   const [updateMedia, { isLoading: isLoadingMediaUpdate }] = useUpdateMediaMutation()
+  const [changePriority, { isLoading: isChangingPriority }] = useChangePriorityMutation()
 
   const toggleDropdown = (id) => {
     setDropdownOpen(prev => ({
@@ -152,6 +159,87 @@ const UnitCard = ({ data, selectedPath, onNodeClick, onRefresh }) => {
     if (teacherModal && selectedItem?.id === item.id) return
     setSelectedItem(item)
     setTeacherModal(true)
+  }
+
+  const handlePriorityManagement = () => {
+    if (!Array.isArray(data) || data.length === 0) return
+
+    const unitsWithIndex = data.map((unit, index) => ({
+      unit,
+      originalIndex: index
+    }))
+
+    const sortedUnits = unitsWithIndex
+      .slice()
+      .sort((a, b) => {
+        const priorityA = typeof a.unit?.priority === 'number' ? a.unit.priority : Number.MAX_SAFE_INTEGER
+        const priorityB = typeof b.unit?.priority === 'number' ? b.unit.priority : Number.MAX_SAFE_INTEGER
+
+        if (priorityA === priorityB) {
+          return a.originalIndex - b.originalIndex
+        }
+
+        return priorityA - priorityB
+      })
+      .map(({ unit }) => unit)
+
+    setPriorityList(sortedUnits)
+    setPriorityModal(true)
+  }
+
+  const handlePriorityModalClose = () => {
+    setPriorityModal(false)
+    setPriorityList([])
+  }
+
+  const moveUnitUp = (index) => {
+    if (index <= 0) return
+
+    setPriorityList(prev => {
+      const newList = [...prev]
+      const temp = newList[index]
+      newList[index] = newList[index - 1]
+      newList[index - 1] = temp
+      return newList
+    })
+  }
+
+  const moveUnitDown = (index) => {
+    setPriorityList(prev => {
+      if (index < 0 || index >= prev.length - 1) return prev
+      const newList = [...prev]
+      const temp = newList[index]
+      newList[index] = newList[index + 1]
+      newList[index + 1] = temp
+      return newList
+    })
+  }
+
+  const handleSavePriority = async () => {
+    try {
+      if (!priorityList.length) {
+        handlePriorityModalClose()
+        return
+      }
+
+      const formDataPayload = new FormData()
+      priorityList.forEach((unit, index) => {
+        if (!unit?.id) return
+        formDataPayload.append(`context[${unit.id}]`, index + 1)
+      })
+
+      await changePriority({ body: formDataPayload }).unwrap()
+      handlePriorityModalClose()
+      onRefresh?.()
+    } catch (error) {
+      console.error('Error updating unit priority:', error)
+      const errorMessage = error?.data?.message || error?.message || t('An error occurred while updating priority')
+      ErrorAlert({
+        title: t('Error'),
+        body: errorMessage,
+        button: t('OK')
+      })
+    }
   }
 
   // Memoize eLevelContext to prevent unnecessary re-renders
@@ -339,9 +427,21 @@ const UnitCard = ({ data, selectedPath, onNodeClick, onRefresh }) => {
               {t('Manage units for')} {selectedPath[3]?.name || t('selected subject')}
             </p>
           </div>
-          <Button color="primary" onClick={handleCreate} className="d-flex align-items-center">
-            <Plus size={16}/>
-          </Button>
+          <div className="d-flex gap-2">
+            <Button
+              color="warning"
+              outline
+              onClick={handlePriorityManagement}
+              className="d-flex align-items-center"
+              disabled={!data?.length}
+            >
+              <List size={16} className="me-1" />
+              {t('Manage Priority')}
+            </Button>
+            <Button color="primary" onClick={handleCreate} className="d-flex align-items-center">
+              <Plus size={16}/>
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -361,7 +461,22 @@ const UnitCard = ({ data, selectedPath, onNodeClick, onRefresh }) => {
                 <CardBody className="d-flex flex-column">
                   <div className="d-flex justify-content-between align-items-start">
                     <div className="content-info flex-grow-1">
-                      <h6 className="content-title mb-1">{item.name}</h6>
+                      <div className="d-flex align-items-center gap-2 mb-1">
+                        {item?.priority !== undefined && item?.priority !== null && (
+                          <Badge
+                            color="primary"
+                            style={{
+                              fontSize: '0.75rem',
+                              fontWeight: 'bold',
+                              minWidth: '30px',
+                              textAlign: 'center'
+                            }}
+                          >
+                            #{item.priority}
+                          </Badge>
+                        )}
+                        <h6 className="content-title mb-0">{item.name}</h6>
+                      </div>
                       <p className="content-description text-muted small">
                         {item.bio || t('No description available')}
                       </p>
@@ -716,6 +831,129 @@ const UnitCard = ({ data, selectedPath, onNodeClick, onRefresh }) => {
             disabled={isChangingStatus}
           >
             {isChangingStatus ? t('Processing...') : selectedItem?.publish_status === 'published' ? t('Unpublish') : t('Publish')}
+          </Button>
+        </ModalFooter>
+      </Modal>
+
+      <Modal isOpen={priorityModal} toggle={handlePriorityModalClose} size="lg">
+        <ModalHeader toggle={handlePriorityModalClose}>
+          <div className="d-flex align-items-center">
+            <List size={20} className="me-2" />
+            {t('Manage Unit Priority')}
+          </div>
+        </ModalHeader>
+        <ModalBody>
+          <div className="mb-3">
+            <p className="text-muted mb-0">
+              {t('Drag units to reorder or use the up/down buttons. Units with higher priority appear first.')}
+            </p>
+          </div>
+          <div className="priority-list">
+            {priorityList.map((unit, index) => (
+              <div
+                key={unit.id}
+                className="priority-item d-flex align-items-center justify-content-between p-2 mb-2 border rounded"
+                style={{
+                  backgroundColor: '#f8f9fa',
+                  cursor: 'move',
+                  transition: 'all 0.2s ease',
+                  minHeight: '50px'
+                }}
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData('text/plain', index.toString())
+                  e.currentTarget.style.opacity = '0.5'
+                }}
+                onDragEnd={(e) => {
+                  e.currentTarget.style.opacity = '1'
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault()
+                  e.currentTarget.style.backgroundColor = '#e9ecef'
+                }}
+                onDragLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f8f9fa'
+                }}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  e.currentTarget.style.backgroundColor = '#f8f9fa'
+                  const draggedIndex = parseInt(e.dataTransfer.getData('text/plain'), 10)
+                  const dropIndex = index
+
+                  if (Number.isNaN(draggedIndex) || draggedIndex === dropIndex) return
+
+                  setPriorityList(prev => {
+                    const newList = [...prev]
+                    const [draggedItem] = newList.splice(draggedIndex, 1)
+                    newList.splice(dropIndex, 0, draggedItem)
+                    return newList
+                  })
+                }}
+              >
+                <div className="d-flex align-items-center">
+                  <Badge
+                    color="primary"
+                    className="me-2"
+                    style={{
+                      minWidth: '25px',
+                      textAlign: 'center',
+                      fontSize: '0.75rem'
+                    }}
+                  >
+                    {index + 1}
+                  </Badge>
+                  <div>
+                    <h6 className="mb-0" style={{ fontSize: '0.9rem' }}>{unit.name}</h6>
+                    {unit.priority !== undefined && unit.priority !== null && (
+                      <small className="text-muted">
+                        {t('Current priority')}: {unit.priority}
+                      </small>
+                    )}
+                  </div>
+                </div>
+                <div className="d-flex gap-1">
+                  <Button
+                    color="outline-primary"
+                    size="sm"
+                    onClick={() => moveUnitUp(index)}
+                    disabled={index === 0}
+                    className="p-1"
+                    style={{ minWidth: '32px', minHeight: '32px' }}
+                  >
+                    <ChevronUp size={14} />
+                  </Button>
+                  <Button
+                    color="outline-primary"
+                    size="sm"
+                    onClick={() => moveUnitDown(index)}
+                    disabled={index === priorityList.length - 1}
+                    className="p-1"
+                    style={{ minWidth: '32px', minHeight: '32px' }}
+                  >
+                    <ChevronDown size={14} />
+                  </Button>
+                </div>
+              </div>
+            ))}
+            {!priorityList.length && (
+              <div className="text-center text-muted py-4 border rounded">
+                {t('No units available to reorder.')}
+              </div>
+            )}
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          <Button color="secondary" outline onClick={handlePriorityModalClose}>
+            <X size={14} className="me-1" />
+            {t('Cancel')}
+          </Button>
+          <Button
+            color="primary"
+            onClick={handleSavePriority}
+            disabled={isChangingPriority || !priorityList.length}
+          >
+            <Save size={14} className="me-1" />
+            {isChangingPriority ? t('Saving...') : t('Save Priority Order')}
           </Button>
         </ModalFooter>
       </Modal>
