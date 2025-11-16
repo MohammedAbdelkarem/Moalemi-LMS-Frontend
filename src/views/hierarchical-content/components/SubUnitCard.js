@@ -314,8 +314,7 @@ const SubUnitCard = ({ data, selectedPath, onNodeClick, onRefresh }) => {
 
   const handleSubmitEdit = async () => {
     try {
-      // First, update the sub-unit data (without image/video)
-      const formDataToSend = new FormData()
+      const formDataToSend = new URLSearchParams()
       formDataToSend.append('name', formData.name)
       
       if (formData.bio && formData.bio.trim() !== '') {
@@ -324,7 +323,6 @@ const SubUnitCard = ({ data, selectedPath, onNodeClick, onRefresh }) => {
       
       await updateSubUnit({ body: formDataToSend, id: selectedItem.id }).unwrap()
 
-      // Then, update media separately if new files are uploaded
       if (files.length > 0 && selectedItem.media?.id) {
         const mediaFormData = new FormData()
         mediaFormData.append('images[]', files[0])
@@ -336,7 +334,6 @@ const SubUnitCard = ({ data, selectedPath, onNodeClick, onRefresh }) => {
         }).unwrap()
       }
 
-      // Update videos using media API if video files are selected
       if (videoFiles.length > 0) {
         const videoFormData = new FormData()
         videoFormData.append('_method', 'PUT')
@@ -591,7 +588,6 @@ const SubUnitCard = ({ data, selectedPath, onNodeClick, onRefresh }) => {
         </ModalFooter>
       </Modal>
 
-      {/* Edit Modal */}
       <Modal isOpen={editModal} toggle={() => setEditModal(false)} size="lg">
         <ModalHeader 
           toggle={() => setEditModal(false)}
